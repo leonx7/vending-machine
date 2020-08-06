@@ -10,5 +10,7 @@ public class Main {
         if (args.length == 1)
             gen = new FileInputSupplier(args[0]);
         vendingMachine.run(gen);
+        System.out.println(vendingMachine.getCashInventory());
+        System.out.println(vendingMachine.getItemInventory());
     }
 }

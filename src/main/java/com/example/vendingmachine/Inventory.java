@@ -36,4 +36,16 @@ public class Inventory<T> {
     public void put(T item, int quantity) {
         inventory.put(item, quantity);
     }
+
+    @Override
+    public String toString() {
+        StringBuilder result = new StringBuilder();
+        for (Map.Entry<T, Integer> entry : inventory.entrySet()) {
+            result.append(entry.getKey());
+            result.append(" : ");
+            result.append(entry.getValue());
+            result.append("\n");
+        }
+        return result.toString();
+    }
 }

@@ -1,12 +1,16 @@
 package com.example.vendingmachine;
 
+import com.example.vendingmachine.exeption.NotSufficientChangeException;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.function.Supplier;
@@ -59,18 +63,29 @@ public class VendingMachine {
     private int amount = 0;
     private Input selection = null;
     private EnumMap<State, Command> em = new EnumMap<>(State.class);
+    private Inventory<Input.Money> cashInventory = new Inventory<>();
+    private Inventory<Input.Item> itemInventory = new Inventory<>();
 
     public VendingMachine() {
         initialize();
     }
 
-    public void initialize() {
+    private void initialize() {
+
+        for (Input.Money input : Input.Money.class.getEnumConstants()) {
+            cashInventory.put(input, 5);
+        }
+        for (Input.Item input : Input.Item.class.getEnumConstants()) {
+            itemInventory.put(input, 5);
+        }
+
         em.put(State.RESTING, new Command() {
             @Override
             public void next(Input input) {
                 switch (Category.categorize(input)) {
                     case MONEY:
                         amount += input.amount();
+                        cashInventory.add((Input.Money) input);
                         state = State.ADDING_MONEY;
                         break;
                     case SHUT_DOWN:
@@ -85,13 +100,18 @@ public class VendingMachine {
                 switch (Category.categorize(input)) {
                     case MONEY:
                         amount += input.amount();
+                        cashInventory.add((Input.Money) input);
                         break;
                     case ITEM_SELECTION:
                         selection = input;
                         if (amount < selection.amount())
                             System.out.println("Insufficient money for " + selection);
-                        else
+                        else if (!itemInventory.hasItem((Input.Item) input))
+                            System.out.println("This item is run out");
+                        else {
+                            itemInventory.deduct((Input.Item) input);
                             state = DISPERSING;
+                        }
                         break;
                     case QUIT_TRANSACTION:
                         state = State.GIVING_CHANGE;
@@ -114,8 +134,29 @@ public class VendingMachine {
             @Override
             public void next() {
                 if (amount > 0) {
-                    System.out.println("Your change: " + amount);
-                    amount = 0;
+                    List<Input.Money> changes = new ArrayList<>();
+                    while (amount > 0)
+                        if (amount >= Input.Money.DOLLAR.getValue() && cashInventory.hasItem(Input.Money.DOLLAR)) {
+                            changes.add(Input.Money.DOLLAR);
+                            cashInventory.deduct(Input.Money.DOLLAR);
+                            amount -= 100;
+                        } else if (amount >= Input.Money.QUARTER.getValue() && cashInventory.hasItem(Input.Money.QUARTER)) {
+                            changes.add(Input.Money.QUARTER);
+                            cashInventory.deduct(Input.Money.QUARTER);
+                            amount -= 25;
+                        }else if (amount >= Input.Money.DIME.getValue() && cashInventory.hasItem(Input.Money.DIME)) {
+                            changes.add(Input.Money.DIME);
+                            cashInventory.deduct(Input.Money.DIME);
+                            amount -= 10;
+                        }else if (amount >= Input.Money.NICKEL.getValue() && cashInventory.hasItem(Input.Money.NICKEL)) {
+                            changes.add(Input.Money.NICKEL);
+                            cashInventory.deduct(Input.Money.NICKEL);
+                            amount -= 5;
+                        }
+                        else
+                            throw  new NotSufficientChangeException("Not sufficient change, please try another product");
+
+                    System.out.println("Your change: " + changes.toString());
                 }
                 state = State.RESTING;
             }
@@ -147,6 +188,14 @@ public class VendingMachine {
         State(StateDuration trans) {
             this.isTransient = true;
         }
+    }
+
+    public Inventory<Input.Money> getCashInventory() {
+        return cashInventory;
+    }
+
+    public Inventory<Input.Item> getItemInventory() {
+        return itemInventory;
     }
 
     public void run(Supplier<Input> gen) {
@@ -200,14 +249,13 @@ class FileInputSupplier implements Supplier<Input> {
             throw new NoSuchElementException("No input!");
         String name = input.next().trim();
         Input result = null;
-        if (name.equals("NICKEL")  || name.equals("DIME") || name.equals("QUARTER") || name.equals("DOLLAR")){
+        if (name.equals("NICKEL") || name.equals("DIME") || name.equals("QUARTER") || name.equals("DOLLAR")) {
             result = Enum.valueOf(Input.Money.class, name);
-        }
-        else if(name.equals("TOOTHPASTE") || name.equals("SODA") || name.equals("CHIPS") || name.equals("SOAP"))
+        } else if (name.equals("TOOTHPASTE") || name.equals("SODA") || name.equals("CHIPS") || name.equals("SOAP"))
             result = Enum.valueOf(Input.Item.class, name);
-        else if(name.equals("ABORT_TRANSACTION"))
+        else if (name.equals("ABORT_TRANSACTION"))
             result = Enum.valueOf(Input.Abort.class, name);
-        else if(name.equals("STOP") )
+        else if (name.equals("STOP"))
             result = Enum.valueOf(Input.Stop.class, name);
         return result;
     }
