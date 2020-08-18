@@ -1,4 +1,4 @@
-package com.example.vendingmachine;
+package com.example.vendingmachine.model;
 
 import java.util.HashMap;
 import java.util.Map;

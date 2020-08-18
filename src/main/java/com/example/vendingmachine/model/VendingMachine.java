@@ -1,4 +1,4 @@
-package com.example.vendingmachine;
+package com.example.vendingmachine.model;
 
 import com.example.vendingmachine.exeption.NotSufficientChangeException;
 
@@ -16,8 +16,15 @@ import java.util.NoSuchElementException;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-import static com.example.vendingmachine.VendingMachine.State.DISPERSING;
-import static com.example.vendingmachine.VendingMachine.State.TERMINAL;
+import static com.example.vendingmachine.model.Input.Money.DIME;
+import static com.example.vendingmachine.model.Input.Money.DOLLAR;
+import static com.example.vendingmachine.model.Input.Money.NICKEL;
+import static com.example.vendingmachine.model.Input.Money.QUARTER;
+import static com.example.vendingmachine.model.VendingMachine.State.ADDING_MONEY;
+import static com.example.vendingmachine.model.VendingMachine.State.DISPERSING;
+import static com.example.vendingmachine.model.VendingMachine.State.GIVING_CHANGE;
+import static com.example.vendingmachine.model.VendingMachine.State.RESTING;
+import static com.example.vendingmachine.model.VendingMachine.State.TERMINAL;
 
 enum Category {
     MONEY(Input.Money.class),
@@ -59,7 +66,7 @@ interface Command {
 }
 
 public class VendingMachine {
-    private State state = State.RESTING;
+    private State state = RESTING;
     private int amount = 0;
     private Input selection = null;
     private EnumMap<State, Command> em = new EnumMap<>(State.class);
@@ -79,14 +86,14 @@ public class VendingMachine {
             itemInventory.put(input, 5);
         }
 
-        em.put(State.RESTING, new Command() {
+        em.put(RESTING, new Command() {
             @Override
             public void next(Input input) {
                 switch (Category.categorize(input)) {
                     case MONEY:
                         amount += input.amount();
                         cashInventory.add((Input.Money) input);
-                        state = State.ADDING_MONEY;
+                        state = ADDING_MONEY;
                         break;
                     case SHUT_DOWN:
                         state = TERMINAL;
@@ -94,7 +101,7 @@ public class VendingMachine {
                 }
             }
         });
-        em.put(State.ADDING_MONEY, new Command() {
+        em.put(ADDING_MONEY, new Command() {
             @Override
             public void next(Input input) {
                 switch (Category.categorize(input)) {
@@ -114,7 +121,7 @@ public class VendingMachine {
                         }
                         break;
                     case QUIT_TRANSACTION:
-                        state = State.GIVING_CHANGE;
+                        state = GIVING_CHANGE;
                         break;
                     case SHUT_DOWN:
                         state = TERMINAL;
@@ -127,30 +134,30 @@ public class VendingMachine {
             public void next() {
                 System.out.println("Here is your " + selection);
                 amount -= selection.amount();
-                state = State.GIVING_CHANGE;
+                state = GIVING_CHANGE;
             }
         });
-        em.put(State.GIVING_CHANGE, new Command() {
+        em.put(GIVING_CHANGE, new Command() {
             @Override
             public void next() {
                 if (amount > 0) {
                     List<Input.Money> changes = new ArrayList<>();
                     while (amount > 0)
-                        if (amount >= Input.Money.DOLLAR.getValue() && cashInventory.hasItem(Input.Money.DOLLAR)) {
-                            changes.add(Input.Money.DOLLAR);
-                            cashInventory.deduct(Input.Money.DOLLAR);
+                        if (amount >= DOLLAR.getValue() && cashInventory.hasItem(DOLLAR)) {
+                            changes.add(DOLLAR);
+                            cashInventory.deduct(DOLLAR);
                             amount -= 100;
-                        } else if (amount >= Input.Money.QUARTER.getValue() && cashInventory.hasItem(Input.Money.QUARTER)) {
-                            changes.add(Input.Money.QUARTER);
-                            cashInventory.deduct(Input.Money.QUARTER);
+                        } else if (amount >= QUARTER.getValue() && cashInventory.hasItem(QUARTER)) {
+                            changes.add(QUARTER);
+                            cashInventory.deduct(QUARTER);
                             amount -= 25;
-                        }else if (amount >= Input.Money.DIME.getValue() && cashInventory.hasItem(Input.Money.DIME)) {
-                            changes.add(Input.Money.DIME);
-                            cashInventory.deduct(Input.Money.DIME);
+                        }else if (amount >= DIME.getValue() && cashInventory.hasItem(DIME)) {
+                            changes.add(DIME);
+                            cashInventory.deduct(DIME);
                             amount -= 10;
-                        }else if (amount >= Input.Money.NICKEL.getValue() && cashInventory.hasItem(Input.Money.NICKEL)) {
-                            changes.add(Input.Money.NICKEL);
-                            cashInventory.deduct(Input.Money.NICKEL);
+                        }else if (amount >= NICKEL.getValue() && cashInventory.hasItem(NICKEL)) {
+                            changes.add(NICKEL);
+                            cashInventory.deduct(NICKEL);
                             amount -= 5;
                         }
                         else
@@ -158,7 +165,7 @@ public class VendingMachine {
 
                     System.out.println("Your change: " + changes.toString());
                 }
-                state = State.RESTING;
+                state = RESTING;
             }
         });
         em.put(TERMINAL, new Command() {
