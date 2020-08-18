@@ -9,6 +9,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @Data
 public class Item {
-    private Image image;
     private String name;
+    private Image image;
 }

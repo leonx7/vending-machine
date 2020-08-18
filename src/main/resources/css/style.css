@@ -1,0 +1,43 @@
+/* button properties */
+
+.button1{
+    -fx-background-color :linear-gradient(to top left,#FF5A5A, #393351);
+    -fx-background-radius: 12;
+    -fx-border-style: solid;
+    -fx-border-radius: 12;
+    -fx-border-insets: -5;
+    -fx-border-color: linear-gradient(to top left,#FF5A5A, #393351);
+}
+
+.button1:hover{
+    -fx-background-color :linear-gradient(to top left, #393351, #FF5A5A);
+    -fx-background-radius: 12;
+    -fx-border-style: solid;
+    -fx-border-radius: 12;
+    -fx-border-insets: -5;
+    -fx-border-color: linear-gradient(to top left,#FF5A5A, #393351);
+}
+
+.button1:pressed {
+    -fx-background-color: #141124;
+    -fx-background-radius: 12;
+}
+
+/* text-aria properties */
+
+.text-area {
+    -fx-background-color: #dbb1b1, #fff0f0;
+    -fx-background-radius: 15;
+    -fx-border-radius: 15;
+    -fx-border-color: red;
+}
+
+.text-area .scroll-pane {
+    -fx-background-color: transparent;
+}
+.text-area .scroll-pane .viewport{
+    -fx-background-color: transparent;
+}
+.text-area .scroll-pane .content{
+    -fx-background-color: transparent;
+}

@@ -23,7 +23,7 @@ public class MainApp extends Application {
         String fxmlFile = "/fxml/vendingMachine.fxml";
         FXMLLoader loader = new FXMLLoader();
         Parent root = loader.load(getClass().getResourceAsStream(fxmlFile));
-        Scene scene = new Scene(root, 530, 600);
+        Scene scene = new Scene(root, 530, 700);
         scene.setFill(Color.TRANSPARENT);
         stage.setScene(scene);
         stage.initStyle(StageStyle.TRANSPARENT);

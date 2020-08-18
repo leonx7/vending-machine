@@ -51,6 +51,7 @@ enum Category {
     }
 }
 
+
 interface Command {
     default void next(Input input) {
         throw new RuntimeException("Only call next(Input input) for non-transient states");
@@ -64,6 +65,7 @@ interface Command {
         System.out.println(amount);
     }
 }
+
 
 public class VendingMachine {
     private State state = RESTING;
@@ -219,6 +221,7 @@ public class VendingMachine {
     }
 }
 
+
 class RandomInputGenerator implements Generator<Input> {
     @Override
     public Input next() {
@@ -226,12 +229,14 @@ class RandomInputGenerator implements Generator<Input> {
     }
 }
 
+
 class RandomInputSupplier implements Supplier<Input> {
     @Override
     public Input get() {
         return Input.randomSelection();
     }
 }
+
 
 // Create Inputs from a file of ';'-separated strings:
 class FileInputSupplier implements Supplier<Input> {
