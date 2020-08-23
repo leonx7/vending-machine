@@ -11,4 +11,5 @@ import lombok.NoArgsConstructor;
 public class Item {
     private String name;
     private Image image;
+    private String amount;
 }

@@ -2,29 +2,14 @@ package com.example.vendingmachine.model;
 
 import com.example.vendingmachine.exeption.NotSufficientChangeException;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
-import static com.example.vendingmachine.model.Input.Money.DIME;
-import static com.example.vendingmachine.model.Input.Money.DOLLAR;
-import static com.example.vendingmachine.model.Input.Money.NICKEL;
-import static com.example.vendingmachine.model.Input.Money.QUARTER;
-import static com.example.vendingmachine.model.VendingMachine.State.ADDING_MONEY;
-import static com.example.vendingmachine.model.VendingMachine.State.DISPERSING;
-import static com.example.vendingmachine.model.VendingMachine.State.GIVING_CHANGE;
-import static com.example.vendingmachine.model.VendingMachine.State.RESTING;
-import static com.example.vendingmachine.model.VendingMachine.State.TERMINAL;
+import static com.example.vendingmachine.model.Input.Money.*;
+import static com.example.vendingmachine.model.VendingMachine.State.*;
 
 enum Category {
     MONEY(Input.Money.class),
@@ -51,21 +36,19 @@ enum Category {
     }
 }
 
-
 interface Command {
-    default void next(Input input) {
+    default String next(Input input) {
         throw new RuntimeException("Only call next(Input input) for non-transient states");
     }
 
-    default void next() {
+    default String next() {
         throw new RuntimeException("Only call next() for StateDuration.TRANSIENT states");
     }
 
-    default void output(int amount) {
-        System.out.println(amount);
+    default String output(int amount) {
+        return String.valueOf(amount);
     }
 }
-
 
 public class VendingMachine {
     private State state = RESTING;
@@ -90,22 +73,25 @@ public class VendingMachine {
 
         em.put(RESTING, new Command() {
             @Override
-            public void next(Input input) {
+            public String next(Input input) {
                 switch (Category.categorize(input)) {
                     case MONEY:
                         amount += input.amount();
                         cashInventory.add((Input.Money) input);
                         state = ADDING_MONEY;
                         break;
+                    case ITEM_SELECTION:
+                        return "Please deposit money first, then choose item!";
                     case SHUT_DOWN:
                         state = TERMINAL;
                     default:
                 }
+                return "Current deposit: " + amount;
             }
         });
         em.put(ADDING_MONEY, new Command() {
             @Override
-            public void next(Input input) {
+            public String next(Input input) {
                 switch (Category.categorize(input)) {
                     case MONEY:
                         amount += input.amount();
@@ -114,14 +100,14 @@ public class VendingMachine {
                     case ITEM_SELECTION:
                         selection = input;
                         if (amount < selection.amount())
-                            System.out.println("Insufficient money for " + selection);
+                            return "Insufficient money for " + selection;
                         else if (!itemInventory.hasItem((Input.Item) input))
-                            System.out.println("This item is run out");
+                            return "This item is run out";
                         else {
                             itemInventory.deduct((Input.Item) input);
                             state = DISPERSING;
+                            return "Here is your: " + selection;
                         }
-                        break;
                     case QUIT_TRANSACTION:
                         state = GIVING_CHANGE;
                         break;
@@ -129,21 +115,22 @@ public class VendingMachine {
                         state = TERMINAL;
                     default:
                 }
+                return "Current deposit: " + amount;
             }
         });
         em.put(DISPERSING, new Command() {
             @Override
-            public void next() {
-                System.out.println("Here is your " + selection);
+            public String next() {
                 amount -= selection.amount();
                 state = GIVING_CHANGE;
+                return "Here is your " + selection;
             }
         });
         em.put(GIVING_CHANGE, new Command() {
             @Override
-            public void next() {
+            public String next() {
+                List<Money> changes = new ArrayList<>();
                 if (amount > 0) {
-                    List<Input.Money> changes = new ArrayList<>();
                     while (amount > 0)
                         if (amount >= DOLLAR.getValue() && cashInventory.hasItem(DOLLAR)) {
                             changes.add(DOLLAR);
@@ -164,16 +151,15 @@ public class VendingMachine {
                         }
                         else
                             throw  new NotSufficientChangeException("Not sufficient change, please try another product");
-
-                    System.out.println("Your change: " + changes.toString());
                 }
                 state = RESTING;
+                return "Your change: " + changes.toString();
             }
         });
         em.put(TERMINAL, new Command() {
             @Override
-            public void output(int amount) {
-                System.out.println("Halted!");
+            public String output(int amount) {
+                return "Halted!";
             }
         });
     }
@@ -207,68 +193,11 @@ public class VendingMachine {
         return itemInventory;
     }
 
-    public void run(Supplier<Input> gen) {
-        while (state != TERMINAL) {
-            Command command = em.get(state);
-            command.next(gen.get());
-            while (state.isTransient) {
-                command = em.get(state);
-                command.next();
-            }
-            command = em.get(state);
-            command.output(amount);
-        }
+    public String run(Input input){
+        String message;
+        Command command = em.get(state);
+        message = command.next(input);
+        return message;
     }
 }
 
-
-class RandomInputGenerator implements Generator<Input> {
-    @Override
-    public Input next() {
-        return Input.randomSelection();
-    }
-}
-
-
-class RandomInputSupplier implements Supplier<Input> {
-    @Override
-    public Input get() {
-        return Input.randomSelection();
-    }
-}
-
-
-// Create Inputs from a file of ';'-separated strings:
-class FileInputSupplier implements Supplier<Input> {
-    private Iterator<String> input;
-
-    FileInputSupplier(String fileName) {
-        try {
-            input = Files.lines(Paths.get(fileName))
-                    .skip(1) // Skip the comment line
-                    .flatMap(s -> Arrays.stream(s.split(";")))
-                    .map(String::trim)
-                    .collect(Collectors.toList())
-                    .iterator();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    @Override
-    public Input get() {
-        if (!input.hasNext())
-            throw new NoSuchElementException("No input!");
-        String name = input.next().trim();
-        Input result = null;
-        if (name.equals("NICKEL") || name.equals("DIME") || name.equals("QUARTER") || name.equals("DOLLAR")) {
-            result = Enum.valueOf(Input.Money.class, name);
-        } else if (name.equals("TOOTHPASTE") || name.equals("SODA") || name.equals("CHIPS") || name.equals("SOAP"))
-            result = Enum.valueOf(Input.Item.class, name);
-        else if (name.equals("ABORT_TRANSACTION"))
-            result = Enum.valueOf(Input.Abort.class, name);
-        else if (name.equals("STOP"))
-            result = Enum.valueOf(Input.Stop.class, name);
-        return result;
-    }
-}
